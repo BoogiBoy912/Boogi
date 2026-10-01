@@ -1,1 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <title>Boogi - AI Batch Image Generator</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #0b0b0f;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: min(1200px, 94%);
+      margin: auto;
+      padding: 30px 0 60px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    header h1 {
+      font-size: 42px;
+      margin-bottom: 8px;
+    }
+
+    header p {
+      color: #999;
+      font-size: 16px;
+    }
+
+    .card {
+      background: #15151b;
+      border: 1px solid #292933;
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      background: #0d0d12;
+      border: 1px solid #30303a;
+      border-radius: 10px;
+      color: white;
+      padding: 15px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: #7777ff;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    button,
+    .upload-label {
+      border: none;
+      border-radius: 9px;
+      padding: 11px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      background: #292933;
+      color: white;
+    }
+
+    button:hover,
+    .upload-label:hover {
+      background: #393945;
+    }
+
+    .primary {
+      background: #665cff;
+    }
+
+    .primary:hover {
+      background: #766dff;
+    }
+
+    .danger {
+      background: #a83232;
+    }
+
+    .upload-label {
+      display: inline-block;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .prompt-count {
+      margin-top: 12px;
+      color: #aaa;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .stat {
+      background: #0d0d12;
+      border: 1px solid #292933;
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      color: #888;
+      font-size: 13px;
+    }
+
+    .progress-wrapper {
+      margin-top: 20px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: #292933;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .progress {
+      height: 100%;
+      width: 0%;
+      background: #665cff;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      margin-top: 8px;
+      color: #aaa;
+    }
+
+    .queue {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .job {
+      display: grid;
+      grid-template-columns: 60px 1fr 110px 80px;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 10px;
+      border-bottom: 1px solid #25252d;
+    }
+
+    .job-number {
+      color: #777;
+    }
+
+    .job-prompt {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status {
+      text-align: center;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 20px;
+      background: #292933;
+    }
+
+    .completed {
+      background: #164d32;
+      color: #66e39d;
+    }
+
+    .generating {
+      background: #4b3b13;
+      color: #ffd866;
+    }
+
+    .failed {
+      background: #551f1f;
+      color: #ff7777;
+    }
+
+    .retrying {
+      background: #42315a;
+      color: #d5aaff;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 15px;
+    }
+
+    .result {
+      background: #0d0d12;
+      border: 1px solid #292933;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .result-placeholder {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      font-size: 13px;
+      background: #111117;
+    }
+
+    .result-info {
+      padding: 12px;
+    }
+
+    .result-info small {
+      color: #777;
+    }
+
+    @media (max-width: 800px) {
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .job {
+        grid-template-columns: 40px 1fr;
+      }
+
+      .job .status,
+      .job .retry {
+        grid-column: 2;
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <header>
+    <h1>Boogi</h1>
+    <p>AI Batch Image Generator</p>
+  </header>
+
+  <!-- PROMPT INPUT -->
+  <div class="card">
+
+    <h2>1. Add Prompts</h2>
+
+    <textarea
+      id="promptInput"
+      placeholder="Paste your prompts here...
+
+Example:
+A futuristic city at sunset
+A cinematic mountain landscape
+A beautiful cyberpunk street
+A luxury car in the desert
+..."
+    ></textarea>
+
+    <div class="buttons">
+
+      <label class="upload-label">
+        Upload TXT
+        <input type="file" id="txtFile" accept=".txt">
+      </label>
+
+      <label class="upload-label">
+        Upload CSV
+        <input type="file" id="csvFile" accept=".csv">
+      </label>
+
+      <button onclick="loadPrompts()">
+        Load Prompts
+      </button>
+
+      <button onclick="clearAll()" class="danger">
+        Clear
+      </button>
+
+    </div>
+
+    <div class="prompt-count">
+      Prompts loaded: <strong id="promptCount">0</strong>
+    </div>
+
+  </div>
+
+
+  <!-- CONTROLS -->
+  <div class="card">
+
+    <h2>2. Batch Controls</h2>
+
+    <div class="buttons">
+
+      <button class="primary" onclick="startBatch()">
+        ▶ Start Batch
+      </button>
+
+      <button onclick="pauseBatch()">
+        ⏸ Pause
+      </button>
+
+      <button onclick="resumeBatch()">
+        ▶ Resume
+      </button>
+
+      <button onclick="stopBatch()" class="danger">
+        ■ Stop
+      </button>
+
+      <button onclick="retryFailed()">
+        ↻ Retry Failed
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- STATS -->
+  <div class="card">
+
+    <h2>3. Progress</h2>
+
+    <div class="stats">
+
+      <div class="stat">
+        <div class="stat-number" id="total">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="completed">0</div>
+        <div class="stat-label">Completed</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="generating">0</div>
+        <div class="stat-label">Generating</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="queued">0</div>
+        <div class="stat-label">Queued</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="failed">0</div>
+        <div class="stat-label">Failed</div>
+      </div>
+
+    </div>
+
+    <div class="progress-wrapper">
+
+      <div class="progress-bar">
+        <div class="progress" id="progress"></div>
+      </div>
+
+      <div class="progress-text" id="progressText">
+        0%
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- QUEUE -->
+  <div class="card">
+
+    <h2>4. Batch Queue</h2>
+
+    <div class="queue" id="queue">
+      <div style="color:#777;">
+        No prompts loaded yet.
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- RESULTS -->
+  <div class="card">
+
+    <h2>5. Generated Images</h2>
+
+    <div class="results-grid" id="results">
+
+      <div style="color:#777;">
+        Images will appear here after generation.
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+let jobs = [];
+let running = false;
+let paused = false;
+let stopped = false;
+
+
+/* LOAD PROMPTS */
+
+function loadPrompts() {
+
+  const input = document.getElementById("promptInput");
+
+  const lines = input.value
+    .split("\n")
+    .map(x => x.trim())
+    .filter(x => x.length > 0);
+
+  jobs = lines.map((prompt, index) => ({
+    id: index + 1,
+    prompt: prompt,
+    status: "Queued",
+    retry: 0
+  }));
+
+  render();
+
+}
+
+
+/* START */
+
+async function startBatch() {
+
+  if (jobs.length === 0) {
+    alert("Please add prompts first.");
+    return;
+  }
+
+  running = true;
+  paused = false;
+  stopped = false;
+
+  for (let job of jobs) {
+
+    if (!running || stopped) break;
+
+    while (paused && running && !stopped) {
+      await sleep(500);
+    }
+
+    if (!running || stopped) break;
+
+    if (job.status === "Completed") continue;
+
+    job.status = "Generating";
+
+    render();
+
+    /*
+      TEMPORARY TEST GENERATOR
+
+      API will be connected here later.
+    */
+
+    await sleep(1200);
+
+    if (!running || stopped) break;
+
+    job.status = "Completed";
+
+    render();
+  }
+
+  running = false;
+
+  render();
+
+}
+
+
+/* PAUSE */
+
+function pauseBatch() {
+
+  if (!running) return;
+
+  paused = true;
+
+  render();
+
+}
+
+
+/* RESUME */
+
+function resumeBatch() {
+
+  if (!running) return;
+
+  paused = false;
+
+  render();
+
+}
+
+
+/* STOP */
+
+function stopBatch() {
+
+  running = false;
+  stopped = true;
+  paused = false;
+
+  render();
+
+}
+
+
+/* RETRY FAILED */
+
+function retryFailed() {
+
+  jobs.forEach(job => {
+
+    if (job.status === "Failed") {
+      job.status = "Queued";
+      job.retry = 0;
+    }
+
+  });
+
+  render();
+
+}
+
+
+/* CLEAR */
+
+function clearAll() {
+
+  if (running) {
+    alert("Stop the batch first.");
+    return;
+  }
+
+  jobs = [];
+
+  document.getElementById("promptInput").value = "";
+
+  render();
+
+}
+
+
+/* TXT UPLOAD */
+
+document.getElementById("txtFile").addEventListener("change", function(e) {
+
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(event) {
+
+    document.getElementById("promptInput").value =
+      event.target.result;
+
+    loadPrompts();
+
+  };
+
+  reader.readAsText(file);
+
+});
+
+
+/* CSV UPLOAD */
+
+document.getElementById("csvFile").addEventListener("change", function(e) {
+
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(event) {
+
+    const lines = event.target.result
+      .split("\n")
+      .map(x => x.trim())
+      .filter(x => x.length > 0);
+
+    let prompts = [];
+
+    lines.forEach((line, index) => {
+
+      if (index === 0 && line.toLowerCase().includes("prompt")) {
+        return;
+      }
+
+      const parts = line.split(",");
+
+      prompts.push(parts[0].replace(/^"|"$/g, ""));
+
+    });
+
+    document.getElementById("promptInput").value =
+      prompts.join("\n");
+
+    loadPrompts();
+
+  };
+
+  reader.readAsText(file);
+
+});
+
+
+/* RENDER */
+
+function render() {
+
+  const total = jobs.length;
+
+  const completed =
+    jobs.filter(x => x.status === "Completed").length;
+
+  const generating =
+    jobs.filter(x => x.status === "Generating").length;
+
+  const queued =
+    jobs.filter(x => x.status === "Queued").length;
+
+  const failed =
+    jobs.filter(x => x.status === "Failed").length;
+
+  const percent =
+    total === 0
+      ? 0
+      : Math.round((completed / total) * 100);
+
+
+  document.getElementById("promptCount").textContent = total;
+
+  document.getElementById("total").textContent = total;
+
+  document.getElementById("completed").textContent = completed;
+
+  document.getElementById("generating").textContent = generating;
+
+  document.getElementById("queued").textContent = queued;
+
+  document.getElementById("failed").textContent = failed;
+
+  document.getElementById("progress").style.width =
+    percent + "%";
+
+  document.getElementById("progressText").textContent =
+    percent + "%";
+
+
+  const queue = document.getElementById("queue");
+
+  if (jobs.length === 0) {
+
+    queue.innerHTML =
+      '<div style="color:#777;">No prompts loaded yet.</div>';
+
+  } else {
+
+    queue.innerHTML = jobs.map(job => {
+
+      let statusClass = "";
+
+      if (job.status === "Completed")
+        statusClass = "completed";
+
+      if (job.status === "Generating")
+        statusClass = "generating";
+
+      if (job.status === "Failed")
+        statusClass = "failed";
+
+      if (job.status === "Retrying")
+        statusClass = "retrying";
+
+      return `
+
+        <div class="job">
+
+          <div class="job-number">
+            #${String(job.id).padStart(3, "0")}
+          </div>
+
+          <div class="job-prompt">
+            ${escapeHtml(job.prompt)}
+          </div>
+
+          <div class="status ${statusClass}">
+            ${job.status}
+          </div>
+
+          <div class="retry">
+            Retry: ${job.retry}
+          </div>
+
+        </div>
+
+      `;
+
+    }).join("");
+
+  }
+
+}
+
+
+/* HELPERS */
+
+function sleep(ms) {
+
+  return new Promise(resolve =>
+    setTimeout(resolve, ms)
+  );
+
+}
+
+
+function escapeHtml(text) {
+
+  const div = document.createElement("div");
+
+  div.textContent = text;
+
+  return div.innerHTML;
+
+}
+
+
+render();
+
+</script>
+
+</body>
+</html>
