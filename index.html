@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>Boogi - AI Batch Image Generator</title>
 
@@ -10,6 +16,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -259,11 +266,6 @@
       color: #ff7777;
     }
 
-    .retrying {
-      background: #42315a;
-      color: #d5aaff;
-    }
-
     .results-header {
       display: flex;
       justify-content: space-between;
@@ -290,10 +292,17 @@
       overflow: hidden;
     }
 
+    /* CLICKABLE IMAGE */
     .result img {
       width: 100%;
       display: block;
       background: #111117;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .result img:hover {
+      transform: scale(1.02);
     }
 
     .result-info {
@@ -314,6 +323,8 @@
       padding: 8px 12px;
       border-radius: 7px;
       font-size: 12px;
+      border: none;
+      cursor: pointer;
     }
 
     .download:hover {
@@ -322,6 +333,52 @@
 
     .empty {
       color: #777;
+    }
+
+    /* =========================
+       IMAGE PREVIEW MODAL
+    ========================= */
+
+    .preview-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.92);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 25px;
+    }
+
+    .preview-modal.active {
+      display: flex;
+    }
+
+    .preview-image {
+      max-width: 95vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 10px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .preview-close {
+      position: fixed;
+      top: 20px;
+      right: 25px;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.12);
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+      z-index: 10000;
+    }
+
+    .preview-close:hover {
+      background: rgba(255, 255, 255, 0.22);
     }
 
     @media (max-width: 800px) {
@@ -341,24 +398,38 @@
       }
 
     }
+
   </style>
+
 </head>
+
 
 <body>
 
+
 <div class="container">
 
+
   <header>
+
     <h1>Boogi</h1>
-    <p>AI Batch Image Generator</p>
+
+    <p>
+      AI Batch Image Generator
+    </p>
+
   </header>
 
 
-  <!-- PROMPTS -->
+  <!-- =========================
+       PROMPTS
+  ========================== -->
 
   <div class="card">
 
-    <h2>1. Add Prompts</h2>
+    <h2>
+      1. Add Prompts
+    </h2>
 
     <textarea
       id="promptInput"
@@ -367,52 +438,76 @@
 One prompt per line."
     ></textarea>
 
+
     <div class="buttons">
 
       <label class="upload-label">
+
         Upload TXT
+
         <input
           type="file"
           id="txtFile"
           accept=".txt"
         >
+
       </label>
 
+
       <label class="upload-label">
+
         Upload CSV
+
         <input
           type="file"
           id="csvFile"
           accept=".csv"
         >
+
       </label>
 
+
       <button onclick="loadPrompts()">
+
         Load Prompts
+
       </button>
+
 
       <button
         onclick="clearAll()"
         class="danger"
       >
+
         Clear
+
       </button>
 
     </div>
 
+
     <div class="prompt-count">
+
       Prompts loaded:
-      <strong id="promptCount">0</strong>
+      <strong id="promptCount">
+        0
+      </strong>
+
     </div>
 
   </div>
 
 
-  <!-- IMAGE SETTINGS -->
+  <!-- =========================
+       IMAGE SETTINGS
+  ========================== -->
 
   <div class="card">
 
-    <h2>2. Image Settings</h2>
+    <h2>
+      2. Image Settings
+    </h2>
+
 
     <div class="settings-row">
 
@@ -421,6 +516,7 @@ One prompt per line."
         <label for="aspectRatio">
           Aspect Ratio
         </label>
+
 
         <select id="aspectRatio">
 
@@ -438,21 +534,29 @@ One prompt per line."
 
     </div>
 
+
     <div
       class="ratio-info"
       id="ratioInfo"
     >
+
       16:9 selected — 1280 × 720
+
     </div>
 
   </div>
 
 
-  <!-- CONTROLS -->
+  <!-- =========================
+       CONTROLS
+  ========================== -->
 
   <div class="card">
 
-    <h2>3. Batch Controls</h2>
+    <h2>
+      3. Batch Controls
+    </h2>
+
 
     <div class="buttons">
 
@@ -463,13 +567,16 @@ One prompt per line."
         ▶ Start Batch
       </button>
 
+
       <button onclick="pauseBatch()">
         ⏸ Pause
       </button>
 
+
       <button onclick="resumeBatch()">
         ▶ Resume
       </button>
+
 
       <button
         onclick="stopBatch()"
@@ -477,6 +584,7 @@ One prompt per line."
       >
         ■ Stop
       </button>
+
 
       <button onclick="retryFailed()">
         ↻ Retry Failed
@@ -487,75 +595,102 @@ One prompt per line."
   </div>
 
 
-  <!-- PROGRESS -->
+  <!-- =========================
+       PROGRESS
+  ========================== -->
 
   <div class="card">
 
-    <h2>4. Progress</h2>
+    <h2>
+      4. Progress
+    </h2>
+
 
     <div class="stats">
 
+
       <div class="stat">
+
         <div
           class="stat-number"
           id="total"
         >
           0
         </div>
+
         <div class="stat-label">
           Total
         </div>
+
       </div>
 
+
       <div class="stat">
+
         <div
           class="stat-number"
           id="completed"
         >
           0
         </div>
+
         <div class="stat-label">
           Completed
         </div>
+
       </div>
 
+
       <div class="stat">
+
         <div
           class="stat-number"
           id="generating"
         >
           0
         </div>
+
         <div class="stat-label">
           Generating
         </div>
+
       </div>
 
+
       <div class="stat">
+
         <div
           class="stat-number"
           id="queued"
         >
           0
         </div>
+
         <div class="stat-label">
           Queued
         </div>
+
       </div>
 
+
       <div class="stat">
+
         <div
           class="stat-number"
           id="failed"
         >
           0
         </div>
+
         <div class="stat-label">
           Failed
         </div>
+
       </div>
 
+
     </div>
+
 
     <div class="progress-wrapper">
 
@@ -567,6 +702,7 @@ One prompt per line."
         ></div>
 
       </div>
+
 
       <div
         class="progress-text"
@@ -580,11 +716,16 @@ One prompt per line."
   </div>
 
 
-  <!-- QUEUE -->
+  <!-- =========================
+       QUEUE
+  ========================== -->
 
   <div class="card">
 
-    <h2>5. Batch Queue</h2>
+    <h2>
+      5. Batch Queue
+    </h2>
+
 
     <div
       class="queue"
@@ -600,13 +741,18 @@ One prompt per line."
   </div>
 
 
-  <!-- RESULTS -->
+  <!-- =========================
+       RESULTS
+  ========================== -->
 
   <div class="card">
 
     <div class="results-header">
 
-      <h2>6. Generated Images</h2>
+      <h2>
+        6. Generated Images
+      </h2>
+
 
       <button
         id="zipButton"
@@ -618,6 +764,7 @@ One prompt per line."
       </button>
 
     </div>
+
 
     <div
       class="results-grid"
@@ -632,10 +779,41 @@ One prompt per line."
 
   </div>
 
+
 </div>
 
 
+<!-- =========================
+     IMAGE PREVIEW
+========================== -->
+
+<div
+  class="preview-modal"
+  id="previewModal"
+  onclick="closePreview(event)"
+>
+
+  <button
+    class="preview-close"
+    onclick="closePreview()"
+  >
+    ×
+  </button>
+
+
+  <img
+    id="previewImage"
+    class="preview-image"
+    src=""
+    alt="Image preview"
+  >
+
+</div>
+
+
+
 <script>
+
 
 /* =========================
    CONFIG
@@ -666,6 +844,7 @@ const aspectRatio =
   document.getElementById(
     "aspectRatio"
   );
+
 
 const ratioInfo =
   document.getElementById(
@@ -714,32 +893,35 @@ function loadPrompts() {
     input.value
       .split(/\r?\n/)
       .map(x => x.trim())
-      .filter(x => x.length > 0);
+      .filter(
+        x => x.length > 0
+      );
 
 
-  jobs = lines.map(
-    (prompt, index) => ({
+  jobs =
+    lines.map(
+      (prompt, index) => ({
 
-      id: index + 1,
+        id: index + 1,
 
-      prompt: prompt,
+        prompt: prompt,
 
-      status: "Queued",
+        status: "Queued",
 
-      retry: 0,
+        retry: 0,
 
-      finalBlob: null,
+        finalBlob: null,
 
-      finalUrl: null,
+        finalUrl: null,
 
-      aspectRatio: null,
+        aspectRatio: null,
 
-      width: null,
+        width: null,
 
-      height: null
+        height: null
 
-    })
-  );
+      })
+    );
 
 
   render();
@@ -758,108 +940,23 @@ function getDimensions() {
   ) {
 
     return {
+
       width: 720,
+
       height: 1280
+
     };
 
   }
 
 
   return {
+
     width: 1280,
+
     height: 720
+
   };
-
-}
-
-
-/* =========================
-   EXTRACT LABELS
-========================= */
-
-function extractLabels(prompt) {
-
-  const labels = [];
-
-
-  /*
-    Looks for:
-    Minimal labels "ABC" and "XYZ"
-  */
-
-  const match =
-    prompt.match(
-      /(?:Minimal labels|labels)\s+(.+?)(?:\.|$)/i
-    );
-
-
-  if (!match) {
-    return labels;
-  }
-
-
-  const labelPart =
-    match[1];
-
-
-  const quoted =
-    labelPart.match(
-      /"([^"]+)"/g
-    );
-
-
-  if (quoted) {
-
-    quoted.forEach(
-      item => {
-
-        labels.push(
-          item.replace(
-            /^"|"$/g,
-            ""
-          )
-        );
-
-      }
-    );
-
-  }
-
-
-  return labels;
-
-}
-
-
-/* =========================
-   CLEAN PROMPT
-========================= */
-
-function buildImagePrompt(
-  originalPrompt
-) {
-
-  return `
-
-${originalPrompt}
-
-IMPORTANT IMAGE GENERATION INSTRUCTION:
-
-Create ONLY the chalk-style illustration and visual elements.
-
-DO NOT render any text.
-DO NOT render letters.
-DO NOT render words.
-DO NOT render labels.
-DO NOT render typography.
-DO NOT render captions.
-DO NOT render signs with readable text.
-
-Leave clean visual space where labels can be added later.
-
-The final image must contain no generated text.
-
-`.trim();
 
 }
 
@@ -874,11 +971,15 @@ async function generateJob(job) {
     getDimensions();
 
 
-  const imagePrompt =
-    buildImagePrompt(
-      job.prompt
-    );
+  /*
+    IMPORTANT:
 
+    Send the ORIGINAL prompt.
+
+    No "DO NOT render text"
+    No Canvas
+    No manual labels.
+  */
 
   const response =
     await fetch(
@@ -888,14 +989,16 @@ async function generateJob(job) {
         method: "POST",
 
         headers: {
+
           "Content-Type":
             "application/json"
+
         },
 
         body: JSON.stringify({
 
           prompt:
-            imagePrompt,
+            job.prompt,
 
           width:
             dimensions.width,
@@ -917,10 +1020,12 @@ async function generateJob(job) {
     let message =
       "Generation failed.";
 
+
     try {
 
       const data =
         await response.json();
+
 
       message =
         data.error ||
@@ -928,388 +1033,45 @@ async function generateJob(job) {
 
     } catch (e) {}
 
+
     throw new Error(message);
 
   }
 
 
+  /*
+    Get AI-generated image
+    directly from Worker.
+  */
+
   const blob =
     await response.blob();
 
 
-  /*
-    Add exact labels automatically
-  */
-
-  const finalBlob =
-    await createFinalImage(
-      blob,
-      extractLabels(job.prompt),
-      dimensions.width,
-      dimensions.height
-    );
-
-
   const finalUrl =
     URL.createObjectURL(
-      finalBlob
+      blob
     );
 
 
   job.finalBlob =
-    finalBlob;
+    blob;
+
 
   job.finalUrl =
     finalUrl;
 
+
   job.width =
     dimensions.width;
+
 
   job.height =
     dimensions.height;
 
+
   job.aspectRatio =
     aspectRatio.value;
-
-}
-
-
-/* =========================
-   CREATE FINAL IMAGE
-========================= */
-
-async function createFinalImage(
-  blob,
-  labels,
-  width,
-  height
-) {
-
-  const image =
-    await loadImage(blob);
-
-
-  const canvas =
-    document.createElement(
-      "canvas"
-    );
-
-
-  canvas.width =
-    width;
-
-  canvas.height =
-    height;
-
-
-  const ctx =
-    canvas.getContext("2d");
-
-
-  /*
-    Draw AI image
-  */
-
-  ctx.drawImage(
-    image,
-    0,
-    0,
-    width,
-    height
-  );
-
-
-  /*
-    Add exact labels
-  */
-
-  if (labels.length > 0) {
-
-    drawLabels(
-      ctx,
-      labels,
-      width,
-      height
-    );
-
-  }
-
-
-  /*
-    Convert to JPEG
-  */
-
-  return await new Promise(
-    resolve => {
-
-      canvas.toBlob(
-        blob => resolve(blob),
-        "image/jpeg",
-        0.95
-      );
-
-    }
-  );
-
-}
-
-
-/* =========================
-   LOAD IMAGE
-========================= */
-
-function loadImage(blob) {
-
-  return new Promise(
-    (resolve, reject) => {
-
-      const url =
-        URL.createObjectURL(
-          blob
-        );
-
-
-      const img =
-        new Image();
-
-
-      img.onload =
-        () => {
-
-          URL.revokeObjectURL(
-            url
-          );
-
-          resolve(img);
-
-        };
-
-
-      img.onerror =
-        reject;
-
-
-      img.src =
-        url;
-
-    }
-  );
-
-}
-
-
-/* =========================
-   DRAW LABELS
-========================= */
-
-function drawLabels(
-  ctx,
-  labels,
-  width,
-  height
-) {
-
-  /*
-    Chalk-style label design
-  */
-
-  ctx.textAlign =
-    "center";
-
-  ctx.textBaseline =
-    "middle";
-
-
-  const fontSize =
-    Math.max(
-      22,
-      Math.round(
-        width * 0.026
-      )
-    );
-
-
-  ctx.font =
-    `bold ${fontSize}px Arial`;
-
-
-  /*
-    Put labels along bottom
-  */
-
-  const y =
-    height -
-    Math.round(
-      height * 0.10
-    );
-
-
-  const maxLabels =
-    Math.min(
-      labels.length,
-      4
-    );
-
-
-  for (
-    let i = 0;
-    i < maxLabels;
-    i++
-  ) {
-
-    const x =
-      width *
-      (
-        (i + 1) /
-        (maxLabels + 1)
-      );
-
-
-    const text =
-      labels[i];
-
-
-    /*
-      Chalk underline/background
-    */
-
-    const metrics =
-      ctx.measureText(
-        text
-      );
-
-
-    const boxWidth =
-      metrics.width + 35;
-
-
-    const boxHeight =
-      fontSize + 22;
-
-
-    ctx.save();
-
-
-    /*
-      Dark transparent chalkboard
-      label area
-    */
-
-    ctx.fillStyle =
-      "rgba(0,0,0,0.72)";
-
-
-    roundRect(
-      ctx,
-      x - boxWidth / 2,
-      y - boxHeight / 2,
-      boxWidth,
-      boxHeight,
-      8
-    );
-
-
-    ctx.fill();
-
-
-    /*
-      White chalk text
-    */
-
-    ctx.fillStyle =
-      "#ffffff";
-
-
-    ctx.shadowColor =
-      "rgba(255,255,255,0.25)";
-
-    ctx.shadowBlur =
-      3;
-
-
-    ctx.fillText(
-      text.toUpperCase(),
-      x,
-      y
-    );
-
-
-    ctx.restore();
-
-  }
-
-}
-
-
-/* =========================
-   ROUNDED RECT
-========================= */
-
-function roundRect(
-  ctx,
-  x,
-  y,
-  width,
-  height,
-  radius
-) {
-
-  ctx.beginPath();
-
-  ctx.moveTo(
-    x + radius,
-    y
-  );
-
-  ctx.lineTo(
-    x + width - radius,
-    y
-  );
-
-  ctx.quadraticCurveTo(
-    x + width,
-    y,
-    x + width,
-    y + radius
-  );
-
-  ctx.lineTo(
-    x + width,
-    y + height - radius
-  );
-
-  ctx.quadraticCurveTo(
-    x + width,
-    y + height,
-    x + width - radius,
-    y + height
-  );
-
-  ctx.lineTo(
-    x + radius,
-    y + height
-  );
-
-  ctx.quadraticCurveTo(
-    x,
-    y + height,
-    x,
-    y + height - radius
-  );
-
-  ctx.lineTo(
-    x,
-    y + radius
-  );
-
-  ctx.quadraticCurveTo(
-    x,
-    y,
-    x + radius,
-    y
-  );
-
-  ctx.closePath();
 
 }
 
@@ -1320,7 +1082,9 @@ function roundRect(
 
 async function startBatch() {
 
-  if (jobs.length === 0) {
+  if (
+    jobs.length === 0
+  ) {
 
     alert(
       "Please add prompts first."
@@ -1357,7 +1121,9 @@ async function startBatch() {
       !running ||
       stopped
     ) {
+
       break;
+
     }
 
 
@@ -1376,7 +1142,9 @@ async function startBatch() {
       !running ||
       stopped
     ) {
+
       break;
+
     }
 
 
@@ -1540,7 +1308,9 @@ async function retryFailed() {
       !running ||
       stopped
     ) {
+
       break;
+
     }
 
 
@@ -1605,11 +1375,9 @@ async function retryFailed() {
    DOWNLOAD ONE
 ========================= */
 
-function downloadJob(
-  job
-) {
+function downloadJob(job) {
 
-  if (!job.finalBlob)
+  if (!job || !job.finalBlob)
     return;
 
 
@@ -1628,6 +1396,7 @@ function downloadJob(
   a.href =
     url;
 
+
   a.download =
     `boogi-${String(job.id).padStart(3, "0")}.jpg`;
 
@@ -1644,7 +1413,10 @@ function downloadJob(
 
 
   setTimeout(
-    () => URL.revokeObjectURL(url),
+    () =>
+      URL.revokeObjectURL(
+        url
+      ),
     1000
   );
 
@@ -1688,6 +1460,7 @@ async function downloadAllZip() {
   button.disabled =
     true;
 
+
   button.textContent =
     "Creating ZIP...";
 
@@ -1702,8 +1475,11 @@ async function downloadAllZip() {
       (job, index) => {
 
         zip.file(
+
           `boogi-${String(index + 1).padStart(3, "0")}.jpg`,
+
           job.finalBlob
+
         );
 
       }
@@ -1711,15 +1487,19 @@ async function downloadAllZip() {
 
 
     const zipBlob =
-      await zip.generateAsync(
-        {
-          type: "blob",
-          compression: "DEFLATE",
-          compressionOptions: {
-            level: 6
-          }
+      await zip.generateAsync({
+
+        type: "blob",
+
+        compression: "DEFLATE",
+
+        compressionOptions: {
+
+          level: 6
+
         }
-      );
+
+      });
 
 
     const url =
@@ -1737,6 +1517,7 @@ async function downloadAllZip() {
     a.href =
       url;
 
+
     a.download =
       "boogi-images.zip";
 
@@ -1753,7 +1534,10 @@ async function downloadAllZip() {
 
 
     setTimeout(
-      () => URL.revokeObjectURL(url),
+      () =>
+        URL.revokeObjectURL(
+          url
+        ),
       2000
     );
 
@@ -1774,6 +1558,7 @@ async function downloadAllZip() {
 
   button.disabled =
     false;
+
 
   button.textContent =
     "📦 Download All ZIP";
@@ -1826,7 +1611,9 @@ function clearAll() {
   ).innerHTML = `
 
     <div class="empty">
+
       Images will appear here after generation.
+
     </div>
 
   `;
@@ -1930,19 +1717,13 @@ document
                 index === 0 &&
                 line
                   .toLowerCase()
-                  .includes(
-                    "prompt"
-                  )
+                  .includes("prompt")
               ) {
 
                 return;
 
               }
 
-
-              /*
-                Use first CSV field.
-              */
 
               let value =
                 line
@@ -2108,10 +1889,15 @@ function render() {
     jobs.length === 0
   ) {
 
-    queue.innerHTML =
-      `<div class="empty">
+    queue.innerHTML = `
+
+      <div class="empty">
+
         No prompts loaded yet.
-      </div>`;
+
+      </div>
+
+    `;
 
   } else {
 
@@ -2161,21 +1947,32 @@ function render() {
             <div class="job">
 
               <div class="job-number">
+
                 #${String(job.id).padStart(3, "0")}
+
               </div>
 
+
               <div class="job-prompt">
+
                 ${escapeHtml(job.prompt)}
+
               </div>
+
 
               <div
                 class="status ${statusClass}"
               >
+
                 ${job.status}
+
               </div>
 
+
               <div class="retry">
+
                 Retry: ${job.retry}
+
               </div>
 
             </div>
@@ -2221,7 +2018,9 @@ function renderResults() {
     results.innerHTML = `
 
       <div class="empty">
+
         Images will appear here after generation.
+
       </div>
 
     `;
@@ -2237,24 +2036,35 @@ function renderResults() {
 
         <div class="result">
 
+          <!-- CLICK IMAGE FOR PREVIEW -->
+
           <img
             src="${job.finalUrl}"
             alt="Generated image"
+            onclick="openPreview('${job.finalUrl}')"
           >
+
 
           <div class="result-info">
 
             <small>
+
               #${String(job.id).padStart(3, "0")}
+
               • ${job.aspectRatio}
+
               • ${job.width}×${job.height}
+
             </small>
+
 
             <button
               class="download"
               onclick="downloadJob(jobs.find(j => j.id === ${job.id}))"
             >
+
               Download
+
             </button>
 
           </div>
@@ -2265,6 +2075,89 @@ function renderResults() {
     ).join("");
 
 }
+
+
+/* =========================
+   IMAGE PREVIEW
+========================= */
+
+function openPreview(url) {
+
+  const modal =
+    document.getElementById(
+      "previewModal"
+    );
+
+
+  const image =
+    document.getElementById(
+      "previewImage"
+    );
+
+
+  image.src =
+    url;
+
+
+  modal.classList.add(
+    "active"
+  );
+
+}
+
+
+function closePreview(event) {
+
+  if (
+    event &&
+    event.target &&
+    event.target.id !==
+      "previewModal"
+  ) {
+
+    return;
+
+  }
+
+
+  const modal =
+    document.getElementById(
+      "previewModal"
+    );
+
+
+  const image =
+    document.getElementById(
+      "previewImage"
+    );
+
+
+  modal.classList.remove(
+    "active"
+  );
+
+
+  image.src = "";
+
+}
+
+
+/* ESC TO CLOSE PREVIEW */
+
+document.addEventListener(
+  "keydown",
+  function(event) {
+
+    if (
+      event.key === "Escape"
+    ) {
+
+      closePreview();
+
+    }
+
+  }
+);
 
 
 /* =========================
@@ -2309,7 +2202,10 @@ updateRatioInfo();
 
 render();
 
+
 </script>
 
+
 </body>
+
 </html>
