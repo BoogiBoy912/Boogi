@@ -16,7 +16,7 @@
     body {
       font-family: Arial, sans-serif;
       background: #0b0b0f;
-      color: #fff;
+      color: #ffffff;
       min-height: 100vh;
     }
 
@@ -117,6 +117,47 @@
     .prompt-count {
       margin-top: 12px;
       color: #aaa;
+    }
+
+    /* ASPECT RATIO */
+    .settings-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: end;
+    }
+
+    .setting {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .setting label {
+      color: #aaa;
+      font-size: 13px;
+    }
+
+    .setting select {
+      background: #0d0d12;
+      color: white;
+      border: 1px solid #30303a;
+      border-radius: 9px;
+      padding: 11px 14px;
+      min-width: 180px;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .setting select:focus {
+      border-color: #7777ff;
+    }
+
+    .ratio-info {
+      color: #777;
+      font-size: 13px;
+      margin-top: 10px;
     }
 
     .stats {
@@ -236,9 +277,18 @@
 
     .result img {
       width: 100%;
-      aspect-ratio: 1;
-      object-fit: cover;
       display: block;
+      background: #111117;
+    }
+
+    .result-placeholder {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      font-size: 13px;
+      background: #111117;
     }
 
     .result-info {
@@ -247,23 +297,22 @@
 
     .result-info small {
       color: #777;
+      display: block;
+      margin-bottom: 8px;
     }
 
     .download {
       display: inline-block;
-      margin-top: 10px;
-      padding: 8px 12px;
       background: #292933;
-      color: #fff;
+      color: white;
       text-decoration: none;
-      border-radius: 8px;
+      padding: 8px 12px;
+      border-radius: 7px;
       font-size: 12px;
     }
 
-    .error {
-      color: #ff7777;
-      font-size: 11px;
-      margin-top: 5px;
+    .download:hover {
+      background: #393945;
     }
 
     @media (max-width: 800px) {
@@ -294,8 +343,7 @@
   </header>
 
 
-  <!-- PROMPTS -->
-
+  <!-- PROMPT INPUT -->
   <div class="card">
 
     <h2>1. Add Prompts</h2>
@@ -308,7 +356,8 @@ Example:
 A futuristic city at sunset
 A cinematic mountain landscape
 A beautiful cyberpunk street
-A luxury car in the desert"
+A luxury car in the desert
+..."
     ></textarea>
 
     <div class="buttons">
@@ -334,18 +383,52 @@ A luxury car in the desert"
     </div>
 
     <div class="prompt-count">
-      Prompts loaded:
-      <strong id="promptCount">0</strong>
+      Prompts loaded: <strong id="promptCount">0</strong>
+    </div>
+
+  </div>
+
+
+  <!-- IMAGE SETTINGS -->
+  <div class="card">
+
+    <h2>2. Image Settings</h2>
+
+    <div class="settings-row">
+
+      <div class="setting">
+
+        <label for="aspectRatio">
+          Aspect Ratio
+        </label>
+
+        <select id="aspectRatio">
+
+          <option value="16:9">
+            16:9 — Landscape
+          </option>
+
+          <option value="9:16">
+            9:16 — Portrait
+          </option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+    <div class="ratio-info" id="ratioInfo">
+      16:9 selected — 1280 × 720
     </div>
 
   </div>
 
 
   <!-- CONTROLS -->
-
   <div class="card">
 
-    <h2>2. Batch Controls</h2>
+    <h2>3. Batch Controls</h2>
 
     <div class="buttons">
 
@@ -375,10 +458,9 @@ A luxury car in the desert"
 
 
   <!-- STATS -->
-
   <div class="card">
 
-    <h2>3. Progress</h2>
+    <h2>4. Progress</h2>
 
     <div class="stats">
 
@@ -425,25 +507,25 @@ A luxury car in the desert"
 
 
   <!-- QUEUE -->
-
   <div class="card">
 
-    <h2>4. Batch Queue</h2>
+    <h2>5. Batch Queue</h2>
 
     <div class="queue" id="queue">
+
       <div style="color:#777;">
         No prompts loaded yet.
       </div>
+
     </div>
 
   </div>
 
 
   <!-- RESULTS -->
-
   <div class="card">
 
-    <h2>5. Generated Images</h2>
+    <h2>6. Generated Images</h2>
 
     <div class="results-grid" id="results">
 
@@ -460,37 +542,61 @@ A luxury car in the desert"
 
 <script>
 
-/*
-====================================================
-BOOGI API
-====================================================
-*/
+let jobs = [];
+
+let running = false;
+let paused = false;
+let stopped = false;
 
 const API_URL =
   "https://boogi-api.hyderlife6.workers.dev";
 
 
-let jobs = [];
-let running = false;
-let paused = false;
-let stopped = false;
+/* =========================
+   ASPECT RATIO
+========================= */
+
+const aspectRatio =
+  document.getElementById("aspectRatio");
+
+const ratioInfo =
+  document.getElementById("ratioInfo");
 
 
-/*
-====================================================
-LOAD PROMPTS
-====================================================
-*/
+aspectRatio.addEventListener("change", updateRatioInfo);
+
+
+function updateRatioInfo() {
+
+  if (aspectRatio.value === "16:9") {
+
+    ratioInfo.textContent =
+      "16:9 selected — 1280 × 720";
+
+  } else {
+
+    ratioInfo.textContent =
+      "9:16 selected — 720 × 1280";
+
+  }
+
+}
+
+
+/* =========================
+   LOAD PROMPTS
+========================= */
 
 function loadPrompts() {
 
   const input =
     document.getElementById("promptInput");
 
-  const lines = input.value
-    .split("\n")
-    .map(x => x.trim())
-    .filter(x => x.length > 0);
+  const lines =
+    input.value
+      .split("\n")
+      .map(x => x.trim())
+      .filter(x => x.length > 0);
 
   jobs = lines.map((prompt, index) => ({
 
@@ -502,21 +608,18 @@ function loadPrompts() {
 
     retry: 0,
 
-    imageUrl: "",
-
-    error: ""
+    imageUrl: null
 
   }));
 
   render();
+
 }
 
 
-/*
-====================================================
-START BATCH
-====================================================
-*/
+/* =========================
+   START BATCH
+========================= */
 
 async function startBatch() {
 
@@ -534,11 +637,10 @@ async function startBatch() {
   stopped = false;
 
 
-  for (const job of jobs) {
+  for (let job of jobs) {
 
-    if (!running || stopped) {
+    if (!running || stopped)
       break;
-    }
 
 
     while (
@@ -552,33 +654,49 @@ async function startBatch() {
     }
 
 
-    if (!running || stopped) {
+    if (!running || stopped)
       break;
-    }
 
 
-    if (job.status === "Completed") {
+    if (job.status === "Completed")
       continue;
-    }
 
 
     job.status = "Generating";
-
-    job.error = "";
 
     render();
 
 
     try {
 
-      /*
-      Send prompt to Cloudflare Worker
-      */
+      const ratio =
+        document.getElementById(
+          "aspectRatio"
+        ).value;
+
+
+      let width;
+      let height;
+
+
+      if (ratio === "16:9") {
+
+        width = 1280;
+        height = 720;
+
+      } else {
+
+        width = 720;
+        height = 1280;
+
+      }
+
 
       const response =
         await fetch(
           `${API_URL}/generate`,
           {
+
             method: "POST",
 
             headers: {
@@ -587,89 +705,67 @@ async function startBatch() {
             },
 
             body: JSON.stringify({
-              prompt: job.prompt
+
+              prompt: job.prompt,
+
+              width: width,
+
+              height: height,
+
+              aspectRatio: ratio
+
             })
+
           }
         );
 
 
-      /*
-      Check HTTP status
-      */
-
       if (!response.ok) {
 
-        let message =
-          `Generation failed (${response.status})`;
-
+        let errorMessage =
+          "Generation failed.";
 
         try {
 
-          const error =
+          const errorData =
             await response.json();
 
+          errorMessage =
+            errorData.error ||
+            errorMessage;
 
-          if (error.error) {
-            message = error.error;
-          }
+        } catch (e) {}
 
+        throw new Error(errorMessage);
 
-          if (error.details) {
-            message +=
-              `: ${error.details}`;
-          }
-
-        } catch (_) {}
-
-
-        throw new Error(message);
       }
 
-
-      /*
-      Convert returned image
-      into browser blob
-      */
 
       const blob =
         await response.blob();
 
 
-      if (
-        !blob.type.startsWith("image/")
-      ) {
-
-        throw new Error(
-          "API did not return an image."
-        );
-      }
-
-
-      /*
-      Remove previous blob
-      if retrying
-      */
-
-      if (job.imageUrl) {
-
-        URL.revokeObjectURL(
-          job.imageUrl
-        );
-
-      }
-
-
-      /*
-      Create local image URL
-      */
-
-      job.imageUrl =
+      const imageUrl =
         URL.createObjectURL(blob);
 
 
-      job.status = "Completed";
+      job.imageUrl =
+        imageUrl;
 
-      job.error = "";
+      job.width =
+        width;
+
+      job.height =
+        height;
+
+      job.aspectRatio =
+        ratio;
+
+      job.status =
+        "Completed";
+
+
+      addResult(job);
 
 
     } catch (error) {
@@ -679,14 +775,10 @@ async function startBatch() {
         error
       );
 
+      job.status =
+        "Failed";
 
-      job.status = "Failed";
-
-      job.error =
-        error.message ||
-        "Generation failed";
-
-      job.retry += 1;
+      job.retry++;
 
     }
 
@@ -703,47 +795,41 @@ async function startBatch() {
 }
 
 
-/*
-====================================================
-PAUSE
-====================================================
-*/
+/* =========================
+   PAUSE
+========================= */
 
 function pauseBatch() {
 
-  if (!running) {
+  if (!running)
     return;
-  }
 
   paused = true;
 
   render();
+
 }
 
 
-/*
-====================================================
-RESUME
-====================================================
-*/
+/* =========================
+   RESUME
+========================= */
 
 function resumeBatch() {
 
-  if (!running) {
+  if (!running)
     return;
-  }
 
   paused = false;
 
   render();
+
 }
 
 
-/*
-====================================================
-STOP
-====================================================
-*/
+/* =========================
+   STOP
+========================= */
 
 function stopBatch() {
 
@@ -754,38 +840,244 @@ function stopBatch() {
   paused = false;
 
   render();
+
 }
 
 
-/*
-====================================================
-RETRY FAILED
-====================================================
-*/
+/* =========================
+   RETRY FAILED
+========================= */
 
-function retryFailed() {
+async function retryFailed() {
 
-  jobs.forEach(job => {
+  const failedJobs =
+    jobs.filter(
+      job => job.status === "Failed"
+    );
 
-    if (job.status === "Failed") {
 
-      job.status = "Queued";
+  if (failedJobs.length === 0) {
 
-      job.error = "";
+    alert("No failed jobs.");
+
+    return;
+
+  }
+
+
+  running = true;
+
+  stopped = false;
+
+  paused = false;
+
+
+  for (let job of failedJobs) {
+
+    if (!running || stopped)
+      break;
+
+
+    while (
+      paused &&
+      running &&
+      !stopped
+    ) {
+
+      await sleep(500);
 
     }
 
-  });
+
+    if (!running || stopped)
+      break;
+
+
+    job.status =
+      "Generating";
+
+    render();
+
+
+    try {
+
+      const ratio =
+        document.getElementById(
+          "aspectRatio"
+        ).value;
+
+
+      let width;
+      let height;
+
+
+      if (ratio === "16:9") {
+
+        width = 1280;
+        height = 720;
+
+      } else {
+
+        width = 720;
+        height = 1280;
+
+      }
+
+
+      const response =
+        await fetch(
+          `${API_URL}/generate`,
+          {
+
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+
+              prompt: job.prompt,
+
+              width: width,
+
+              height: height,
+
+              aspectRatio: ratio
+
+            })
+
+          }
+        );
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          "Generation failed."
+        );
+
+      }
+
+
+      const blob =
+        await response.blob();
+
+
+      const imageUrl =
+        URL.createObjectURL(blob);
+
+
+      job.imageUrl =
+        imageUrl;
+
+      job.width =
+        width;
+
+      job.height =
+        height;
+
+      job.aspectRatio =
+        ratio;
+
+      job.status =
+        "Completed";
+
+
+      addResult(job);
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      job.status =
+        "Failed";
+
+      job.retry++;
+
+    }
+
+
+    render();
+
+  }
+
+
+  running = false;
 
   render();
+
 }
 
 
-/*
-====================================================
-CLEAR
-====================================================
-*/
+/* =========================
+   ADD RESULT
+========================= */
+
+function addResult(job) {
+
+  const results =
+    document.getElementById(
+      "results"
+    );
+
+
+  if (
+    results.innerHTML.includes(
+      "Images will appear here"
+    )
+  ) {
+
+    results.innerHTML = "";
+
+  }
+
+
+  const result =
+    document.createElement("div");
+
+
+  result.className =
+    "result";
+
+
+  result.innerHTML = `
+
+    <img
+      src="${job.imageUrl}"
+      alt="Generated image"
+    >
+
+    <div class="result-info">
+
+      <small>
+        #${String(job.id).padStart(3, "0")}
+        • ${job.aspectRatio}
+      </small>
+
+      <a
+        class="download"
+        href="${job.imageUrl}"
+        download="boogi-${job.id}.jpg"
+      >
+        Download
+      </a>
+
+    </div>
+
+  `;
+
+
+  results.appendChild(result);
+
+}
+
+
+/* =========================
+   CLEAR
+========================= */
 
 function clearAll() {
 
@@ -796,6 +1088,7 @@ function clearAll() {
     );
 
     return;
+
   }
 
 
@@ -820,15 +1113,25 @@ function clearAll() {
   ).value = "";
 
 
+  document.getElementById(
+    "results"
+  ).innerHTML = `
+
+    <div style="color:#777;">
+      Images will appear here after generation.
+    </div>
+
+  `;
+
+
   render();
+
 }
 
 
-/*
-====================================================
-TXT UPLOAD
-====================================================
-*/
+/* =========================
+   TXT UPLOAD
+========================= */
 
 document
   .getElementById("txtFile")
@@ -839,9 +1142,8 @@ document
       const file =
         e.target.files[0];
 
-      if (!file) {
+      if (!file)
         return;
-      }
 
 
       const reader =
@@ -867,11 +1169,9 @@ document
   );
 
 
-/*
-====================================================
-CSV UPLOAD
-====================================================
-*/
+/* =========================
+   CSV UPLOAD
+========================= */
 
 document
   .getElementById("csvFile")
@@ -882,9 +1182,8 @@ document
       const file =
         e.target.files[0];
 
-      if (!file) {
+      if (!file)
         return;
-      }
 
 
       const reader =
@@ -915,13 +1214,9 @@ document
               ) {
 
                 return;
+
               }
 
-
-              /*
-              First CSV column
-              is treated as prompt.
-              */
 
               const parts =
                 line.split(",");
@@ -956,11 +1251,9 @@ document
   );
 
 
-/*
-====================================================
-RENDER
-====================================================
-*/
+/* =========================
+   RENDER
+========================= */
 
 function render() {
 
@@ -970,29 +1263,25 @@ function render() {
 
   const completed =
     jobs.filter(
-      x =>
-        x.status === "Completed"
+      x => x.status === "Completed"
     ).length;
 
 
   const generating =
     jobs.filter(
-      x =>
-        x.status === "Generating"
+      x => x.status === "Generating"
     ).length;
 
 
   const queued =
     jobs.filter(
-      x =>
-        x.status === "Queued"
+      x => x.status === "Queued"
     ).length;
 
 
   const failed =
     jobs.filter(
-      x =>
-        x.status === "Failed"
+      x => x.status === "Failed"
     ).length;
 
 
@@ -1052,12 +1341,6 @@ function render() {
     percent + "%";
 
 
-  /*
-  ================================================
-  QUEUE
-  ================================================
-  */
-
   const queue =
     document.getElementById(
       "queue"
@@ -1079,44 +1362,30 @@ function render() {
 
         if (
           job.status === "Completed"
-        ) {
-
+        )
           statusClass =
             "completed";
-
-        }
 
 
         if (
           job.status === "Generating"
-        ) {
-
+        )
           statusClass =
             "generating";
-
-        }
 
 
         if (
           job.status === "Failed"
-        ) {
-
+        )
           statusClass =
             "failed";
 
-        }
 
-
-        const errorText =
-          job.error
-            ? `
-              <div class="error">
-                ${escapeHtml(
-                  job.error
-                )}
-              </div>
-            `
-            : "";
+        if (
+          job.status === "Retrying"
+        )
+          statusClass =
+            "retrying";
 
 
         return `
@@ -1124,20 +1393,11 @@ function render() {
           <div class="job">
 
             <div class="job-number">
-              #${String(job.id).padStart(
-                3,
-                "0"
-              )}
+              #${String(job.id).padStart(3, "0")}
             </div>
 
             <div class="job-prompt">
-
-              ${escapeHtml(
-                job.prompt
-              )}
-
-              ${errorText}
-
+              ${escapeHtml(job.prompt)}
             </div>
 
             <div class="status ${statusClass}">
@@ -1156,105 +1416,18 @@ function render() {
 
   }
 
-
-  /*
-  ================================================
-  GENERATED IMAGES
-  ================================================
-  */
-
-  const results =
-    document.getElementById(
-      "results"
-    );
-
-
-  const completedJobs =
-    jobs.filter(
-      job =>
-        job.status === "Completed" &&
-        job.imageUrl
-    );
-
-
-  if (completedJobs.length === 0) {
-
-    results.innerHTML =
-      '<div style="color:#777;">Images will appear here after generation.</div>';
-
-  } else {
-
-    results.innerHTML =
-      completedJobs.map(job => `
-
-        <div class="result">
-
-          <img
-            src="${job.imageUrl}"
-            alt="${escapeHtml(
-              job.prompt
-            )}"
-          >
-
-          <div class="result-info">
-
-            <small>
-              #${String(job.id).padStart(
-                3,
-                "0"
-              )}
-            </small>
-
-            <div
-              style="
-                margin-top:6px;
-                font-size:13px;
-                line-height:1.4;
-              "
-            >
-              ${escapeHtml(
-                job.prompt
-              )}
-            </div>
-
-            <a
-              class="download"
-              href="${job.imageUrl}"
-              download="boogi-${String(
-                job.id
-              ).padStart(
-                3,
-                "0"
-              )}.jpg"
-            >
-              Download
-            </a>
-
-          </div>
-
-        </div>
-
-      `).join("");
-
-  }
-
 }
 
 
-/*
-====================================================
-HELPERS
-====================================================
-*/
+/* =========================
+   HELPERS
+========================= */
 
 function sleep(ms) {
 
   return new Promise(
     resolve =>
-      setTimeout(
-        resolve,
-        ms
-      )
+      setTimeout(resolve, ms)
   );
 
 }
@@ -1263,22 +1436,17 @@ function sleep(ms) {
 function escapeHtml(text) {
 
   const div =
-    document.createElement(
-      "div"
-    );
+    document.createElement("div");
 
   div.textContent =
     text;
 
   return div.innerHTML;
+
 }
 
 
-/*
-====================================================
-INITIAL RENDER
-====================================================
-*/
+updateRatioInfo();
 
 render();
 
