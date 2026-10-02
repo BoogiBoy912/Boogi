@@ -435,7 +435,8 @@
       id="promptInput"
       placeholder="Paste your prompts here...
 
-One prompt per line."
+Keep each full prompt together.
+Use ONE blank line between prompts."
     ></textarea>
 
 
@@ -888,18 +889,53 @@ function loadPrompts() {
       "promptInput"
     );
 
+  const text =
+    input.value.trim();
 
-  const lines =
-    input.value
-      .split(/\r?\n/)
-      .map(x => x.trim())
+  if (!text) {
+
+    jobs = [];
+
+    render();
+
+    return;
+
+  }
+
+  /*
+    PROMPT FORMAT
+
+    ONE blank line = next prompt.
+
+    Normal line breaks inside a prompt
+    stay part of the SAME prompt.
+
+    Example:
+
+    Prompt 1 line 1
+    Prompt 1 line 2
+    Prompt 1 line 3
+
+    Prompt 2 line 1
+    Prompt 2 line 2
+
+    This creates exactly 2 jobs.
+  */
+
+  const prompts =
+    text
+      .split(/\r?\n\s*\r?\n/)
+      .map(
+        prompt =>
+          prompt.trim()
+      )
       .filter(
-        x => x.length > 0
+        prompt =>
+          prompt.length > 0
       );
 
-
   jobs =
-    lines.map(
+    prompts.map(
       (prompt, index) => ({
 
         id: index + 1,
@@ -922,7 +958,6 @@ function loadPrompts() {
 
       })
     );
-
 
   render();
 
@@ -1753,7 +1788,7 @@ document
           document.getElementById(
             "promptInput"
           ).value =
-            prompts.join("\n");
+            prompts.join("\n\n");
 
 
           loadPrompts();
