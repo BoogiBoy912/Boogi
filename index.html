@@ -220,7 +220,7 @@
     }
 
     .queue {
-      max-height: 500px;
+      max-height: 600px;
       overflow-y: auto;
     }
 
@@ -228,19 +228,36 @@
       display: grid;
       grid-template-columns: 60px 1fr 110px 80px;
       gap: 12px;
-      align-items: center;
+      align-items: start;
       padding: 13px 10px;
       border-bottom: 1px solid #25252d;
     }
 
     .job-number {
       color: #777;
+      padding-top: 2px;
     }
 
     .job-prompt {
+      min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .job-error {
+      color: #ff7777;
+      font-size: 11px;
+      margin-top: 7px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      max-height: 180px;
+      overflow-y: auto;
+      background: rgba(255, 50, 50, 0.06);
+      border-left: 2px solid #a83232;
+      padding: 7px 8px;
+      border-radius: 4px;
     }
 
     .status {
@@ -292,7 +309,6 @@
       overflow: hidden;
     }
 
-    /* CLICKABLE IMAGE */
     .result img {
       width: 100%;
       display: block;
@@ -927,17 +943,6 @@ function loadPrompts() {
 
     Normal line breaks inside a prompt
     stay part of the SAME prompt.
-
-    Example:
-
-    Prompt 1 line 1
-    Prompt 1 line 2
-    Prompt 1 line 3
-
-    Prompt 2 line 1
-    Prompt 2 line 2
-
-    This creates exactly 2 jobs.
   */
 
 
@@ -965,6 +970,8 @@ function loadPrompts() {
         status: "Queued",
 
         retry: 0,
+
+        error: null,
 
         finalBlob: null,
 
@@ -1028,13 +1035,8 @@ async function generateJob(job) {
 
 
   /*
-    IMPORTANT:
-
-    Send the ORIGINAL prompt.
-
-    No "DO NOT render text"
-    No Canvas
-    No manual labels.
+    Send original prompt directly
+    to Cloudflare Worker.
   */
 
 
@@ -1090,18 +1092,29 @@ async function generateJob(job) {
 
 
       /*
-        Include additional Worker
-        details when available.
+        Add Worker status.
       */
 
       if (
-        data.status &&
+        data.status
+      ) {
+
+        message +=
+          "\nHTTP Status: " +
+          data.status;
+
+      }
+
+
+      /*
+        Add Pollinations details.
+      */
+
+      if (
         data.details
       ) {
 
         message +=
-          "\n\nHTTP Status: " +
-          data.status +
           "\n\nDetails:\n" +
           data.details;
 
@@ -1109,10 +1122,20 @@ async function generateJob(job) {
 
     } catch (e) {
 
-      /*
-        If response is not JSON,
-        keep default message.
-      */
+      try {
+
+        const text =
+          await response.text();
+
+        if (text) {
+
+          message +=
+            "\n\nResponse:\n" +
+            text;
+
+        }
+
+      } catch (ignored) {}
 
     }
 
@@ -1129,6 +1152,23 @@ async function generateJob(job) {
 
   const blob =
     await response.blob();
+
+
+  /*
+    Validate response is actually
+    an image.
+  */
+
+  if (
+    !blob ||
+    blob.size === 0
+  ) {
+
+    throw new Error(
+      "Worker returned an empty image."
+    );
+
+  }
 
 
   const finalUrl =
@@ -1155,6 +1195,10 @@ async function generateJob(job) {
 
   job.aspectRatio =
     aspectRatio.value;
+
+
+  job.error =
+    null;
 
 }
 
@@ -1245,6 +1289,10 @@ async function startBatch() {
       "Generating";
 
 
+    job.error =
+      null;
+
+
     render();
 
 
@@ -1267,13 +1315,9 @@ async function startBatch() {
       );
 
 
-      alert(
-        "Generation Error:\n\n" +
-        (
-          error.message ||
-          "Unknown error"
-        )
-      );
+      job.error =
+        error.message ||
+        "Unknown generation error";
 
 
       job.status =
@@ -1432,6 +1476,10 @@ async function retryFailed() {
       "Generating";
 
 
+    job.error =
+      null;
+
+
     render();
 
 
@@ -1449,18 +1497,14 @@ async function retryFailed() {
     } catch (error) {
 
       console.error(
-        "BOOGI GENERATION ERROR:",
+        "BOOGI RETRY ERROR:",
         error
       );
 
 
-      alert(
-        "Generation Error:\n\n" +
-        (
-          error.message ||
-          "Unknown error"
-        )
-      );
+      job.error =
+        error.message ||
+        "Unknown generation error";
 
 
       job.status =
@@ -1490,7 +1534,10 @@ async function retryFailed() {
 
 function downloadJob(job) {
 
-  if (!job || !job.finalBlob)
+  if (
+    !job ||
+    !job.finalBlob
+  )
     return;
 
 
@@ -2070,6 +2117,17 @@ function render() {
 
                 ${escapeHtml(job.prompt)}
 
+                ${
+                  job.error
+                    ? `
+                      <div class="job-error">
+                        ERROR:
+                        ${escapeHtml(job.error)}
+                      </div>
+                    `
+                    : ""
+                }
+
               </div>
 
 
@@ -2148,8 +2206,6 @@ function renderResults() {
       job => `
 
         <div class="result">
-
-          <!-- CLICK IMAGE FOR PREVIEW -->
 
           <img
             src="${job.finalUrl}"
