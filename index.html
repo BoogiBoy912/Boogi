@@ -490,6 +490,7 @@ Use ONE blank line between prompts."
     <div class="prompt-count">
 
       Prompts loaded:
+
       <strong id="promptCount">
         0
       </strong>
@@ -565,17 +566,23 @@ Use ONE blank line between prompts."
         class="primary"
         onclick="startBatch()"
       >
+
         ▶ Start Batch
+
       </button>
 
 
       <button onclick="pauseBatch()">
+
         ⏸ Pause
+
       </button>
 
 
       <button onclick="resumeBatch()">
+
         ▶ Resume
+
       </button>
 
 
@@ -583,12 +590,16 @@ Use ONE blank line between prompts."
         onclick="stopBatch()"
         class="danger"
       >
+
         ■ Stop
+
       </button>
 
 
       <button onclick="retryFailed()">
+
         ↻ Retry Failed
+
       </button>
 
     </div>
@@ -761,7 +772,9 @@ Use ONE blank line between prompts."
         onclick="downloadAllZip()"
         disabled
       >
+
         📦 Download All ZIP
+
       </button>
 
     </div>
@@ -786,7 +799,7 @@ Use ONE blank line between prompts."
 
 <!-- =========================
      IMAGE PREVIEW
-========================== -->
+========================= -->
 
 <div
   class="preview-modal"
@@ -798,7 +811,9 @@ Use ONE blank line between prompts."
     class="preview-close"
     onclick="closePreview()"
   >
+
     ×
+
   </button>
 
 
@@ -889,8 +904,10 @@ function loadPrompts() {
       "promptInput"
     );
 
+
   const text =
     input.value.trim();
+
 
   if (!text) {
 
@@ -901,6 +918,7 @@ function loadPrompts() {
     return;
 
   }
+
 
   /*
     PROMPT FORMAT
@@ -922,6 +940,7 @@ function loadPrompts() {
     This creates exactly 2 jobs.
   */
 
+
   const prompts =
     text
       .split(/\r?\n\s*\r?\n/)
@@ -933,6 +952,7 @@ function loadPrompts() {
         prompt =>
           prompt.length > 0
       );
+
 
   jobs =
     prompts.map(
@@ -958,6 +978,7 @@ function loadPrompts() {
 
       })
     );
+
 
   render();
 
@@ -1016,6 +1037,7 @@ async function generateJob(job) {
     No manual labels.
   */
 
+
   const response =
     await fetch(
       `${API_URL}/generate`,
@@ -1066,7 +1088,33 @@ async function generateJob(job) {
         data.error ||
         message;
 
-    } catch (e) {}
+
+      /*
+        Include additional Worker
+        details when available.
+      */
+
+      if (
+        data.status &&
+        data.details
+      ) {
+
+        message +=
+          "\n\nHTTP Status: " +
+          data.status +
+          "\n\nDetails:\n" +
+          data.details;
+
+      }
+
+    } catch (e) {
+
+      /*
+        If response is not JSON,
+        keep default message.
+      */
+
+    }
 
 
     throw new Error(message);
@@ -1214,7 +1262,17 @@ async function startBatch() {
     } catch (error) {
 
       console.error(
+        "BOOGI GENERATION ERROR:",
         error
+      );
+
+
+      alert(
+        "Generation Error:\n\n" +
+        (
+          error.message ||
+          "Unknown error"
+        )
       );
 
 
@@ -1360,6 +1418,16 @@ async function retryFailed() {
     }
 
 
+    if (
+      !running ||
+      stopped
+    ) {
+
+      break;
+
+    }
+
+
     job.status =
       "Generating";
 
@@ -1381,7 +1449,17 @@ async function retryFailed() {
     } catch (error) {
 
       console.error(
+        "BOOGI GENERATION ERROR:",
         error
+      );
+
+
+      alert(
+        "Generation Error:\n\n" +
+        (
+          error.message ||
+          "Unknown error"
+        )
       );
 
 
@@ -2177,7 +2255,9 @@ function closePreview(event) {
 }
 
 
-/* ESC TO CLOSE PREVIEW */
+/* =========================
+   ESC TO CLOSE PREVIEW
+========================= */
 
 document.addEventListener(
   "keydown",
